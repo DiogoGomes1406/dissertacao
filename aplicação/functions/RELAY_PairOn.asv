@@ -1,0 +1,18 @@
+function  RELAY_PairOn(positive_pin,negative_pin,map,dict)
+%RELAY_PAIRON Takes the pins you want to activate as positive and negative,
+%and a map between pins and relays. It will turn on the relays respective 
+% to the chosen pins.
+%   Detailed explanation goes here
+
+positive_pin_ = dict(positive_pin);
+negative_pin_ = dict(negativ_pin);
+
+positive = map(positive_pin+"+");
+negative = map(negative_pin+"-");
+
+RELAY_TurnOn(str2num(positive{2}),positive{1})
+RELAY_TurnOn(str2num(negative{2}),negative{1})
+
+
+end
+
