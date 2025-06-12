@@ -1,5 +1,5 @@
 function [I1,V1,I2,V2,t]=smu_internal_sweep2(smu, Vgs_list, vDS, DS_comp, GS_comp, ...
-    axes, curve_id, curve_color,x_var, y_var,fixed_channel)
+    axes, curve_id, curve_color,x_var, y_var,fixed_channel,NPLC)
 %SMU_INTERNAL_SWEEP Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -8,8 +8,11 @@ hold(axes, 'on');
 
 % Generate a new plot handle for this sweep
 h = plot(axes, NaN, NaN, 'DisplayName', curve_id, 'Color', curve_color, 'LineWidth', 1.5);
-visaTimeout = 5.0;  % 5 seconds timeout for VISA operations
+visaTimeout = numel(Vgs_list);  % Gives 1 second per point (should be more than enough!)
+smu.Timeout = visaTimeout;
 t1 = tic;
+
+% NPLC = 0.01;
 
 
 sweep_voltages = Vgs_list;
@@ -39,7 +42,8 @@ try
     sendCommandWithCheck(smu, ':SOUR1:VOLT:MODE LIST');           % LIST mode
     sendCommandWithCheck(smu, [':SOUR1:LIST:VOLT ', ch1_voltListStr]);% Define list
     sendCommandWithCheck(smu, ':SENS1:FUNC "CURR"');              % Measure current
-    sendCommandWithCheck(smu, ':SENS1:CURR:NPLC 1');              % 1 PLC
+    %sendCommandWithCheck(smu, ':SENS1:CURR:NPLC 1');              % 1 PLC
+    sendCommandWithCheck(smu, [':SENS1:CURR:NPLC ', num2str(NPLC)]);
     sendCommandWithCheck(smu, [':SENS1:CURR:PROT ', num2str(DS_comp)]); % Compliance
     sendCommandWithCheck(smu, ':TRIG1:SOUR AINT');                % Internal trigger
     sendCommandWithCheck(smu, [':TRIG1:COUN ', num2str(numel(fixed_voltages))]);    % Count
@@ -49,7 +53,8 @@ try
     sendCommandWithCheck(smu, ':SOUR2:VOLT:MODE LIST');
     sendCommandWithCheck(smu, [':SOUR2:LIST:VOLT ', ch2_voltListStr]);
     sendCommandWithCheck(smu, ':SENS2:FUNC "CURR"');
-    sendCommandWithCheck(smu, ':SENS2:CURR:NPLC 1');
+    %sendCommandWithCheck(smu, ':SENS2:CURR:NPLC 1');
+    sendCommandWithCheck(smu, [':SENS2:CURR:NPLC ', num2str(NPLC)]);
     sendCommandWithCheck(smu, [':SENS2:CURR:PROT ', num2str(GS_comp)]);
     sendCommandWithCheck(smu, ':TRIG2:SOUR AINT');
     sendCommandWithCheck(smu, [':TRIG2:COUN ', num2str(numel(sweep_voltages))]);
