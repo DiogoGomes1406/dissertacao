@@ -7,7 +7,6 @@ function  safety_save(path, File_name,Curve_id,...
 if isfile(fullfile(path, File_name + ".mat")) 
     file = load(fullfile(path, File_name + ".mat"));
     data = file.data;
-    disp(data)
     data(end+1,:) = {{Curve_id},DS_comp, GS_comp, Aperture, Vgs_min, Vgs_max,N_cycles, vDS, N_points, Dwell_time,Dwell_voltage, ...
         {Ids}, {Vds}, {Igs}, {Vgs}, {t}};
 
