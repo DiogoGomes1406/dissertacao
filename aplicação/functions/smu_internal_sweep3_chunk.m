@@ -1,7 +1,7 @@
-function [I1,V1,I2,V2,t,x_data,y_data,x_label,y_label] = smu_internal_sweep3_chunk(smu, Vgs_list, vDS, DS_comp, GS_comp, ...
-    axes, curve_id, curve_color,x_var, y_var,fixed_channel,NPLC)
+function [I1,V1,V1_expected,I2,V2,V2_expected,t,x_data,y_data,x_label,y_label] = smu_internal_sweep3_chunk(smu, Vgs_list, vDS, DS_comp, GS_comp, ...
+    axes, curve_id, curve_color,x_var, y_var,fixed_channel,NPLC,flag)
 
-visaTimeout = numel(Vgs_list);  
+visaTimeout = numel(Vgs_list);
 smu.Timeout = visaTimeout;
 t1 = tic;
 
@@ -9,6 +9,7 @@ sweep_voltages = Vgs_list;
 fixed_voltages = vDS*ones(1,numel(sweep_voltages));
 
 try
+    tic
     if fixed_channel == 1
         ch1_voltListStr = sprintf('%.6g,', fixed_voltages); ch1_voltListStr(end) = [];
         ch2_voltListStr = sprintf('%.6g,', sweep_voltages); ch2_voltListStr(end) = [];
@@ -26,6 +27,9 @@ try
     sendCommandWithCheck(smu, [':SENS1:CURR:PROT ', num2str(DS_comp)]);
     sendCommandWithCheck(smu, ':TRIG1:SOUR AINT');
     sendCommandWithCheck(smu, [':TRIG1:COUN ', num2str(numel(fixed_voltages))]);
+%     sendCommandWithCheck(smu, ':SENS1:CURR:RANG 1e-4');  % adjust as needed
+
+
 
     % Channel 2 config
     sendCommandWithCheck(smu, ':SOUR2:FUNC:MODE VOLT');
@@ -36,31 +40,56 @@ try
     sendCommandWithCheck(smu, [':SENS2:CURR:PROT ', num2str(GS_comp)]);
     sendCommandWithCheck(smu, ':TRIG2:SOUR AINT');
     sendCommandWithCheck(smu, [':TRIG2:COUN ', num2str(numel(sweep_voltages))]);
+%     sendCommandWithCheck(smu, ':SENS2:CURR:RANG 1e-4');
+
+
 
     sendCommandWithCheck(smu, ':TRAC:CLE');
     sendCommandWithCheck(smu, ':OUTP1 ON');
     sendCommandWithCheck(smu, ':OUTP2 ON');
 
     pause(min(0.5, 0.01 * numel(sweep_voltages)));  % settle time
+    
+
 
     sendCommandWithCheck(smu, ':INIT (@1,2)');
     sendCommandWithCheck(smu, '*WAI');
 
-    if fixed_channel == 1
-        raw1 = query(smu, ':FETC:ARR:CURR? (@1)');
-        raw2 = query(smu, ':FETC:ARR:CURR? (@2)');
-        I1 = str2num(raw1);
-        I2 = str2num(raw2);
-        V1 = fixed_voltages(:);
-        V2 = sweep_voltages(:);
-    else
-        raw1 = query(smu, ':FETC:ARR:CURR? (@2)');
-        raw2 = query(smu, ':FETC:ARR:CURR? (@1)');
-        I1 = str2num(raw1);
-        I2 = str2num(raw2);
-        V1 = sweep_voltages(:);
-        V2 = fixed_voltages(:);
-    end
+     sendCommandWithCheck(smu, ':OUTP1 OFF');
+     sendCommandWithCheck(smu, ':OUTP2 OFF');
+     
+
+if fixed_channel == 1
+    rawI1 = query(smu, ':FETC:ARR:CURR? (@1)');
+    rawI2 = query(smu, ':FETC:ARR:CURR? (@2)');
+    rawV1 = query(smu, ':FETC:ARR:VOLT? (@1)');
+    rawV2 = query(smu, ':FETC:ARR:VOLT? (@2)');
+
+    I1 = str2num(rawI1);
+    I2 = str2num(rawI2);
+    V1 = str2num(rawV1);  % actual measured Vds
+    V2 = str2num(rawV2);  % actual measured Vgs
+    % these are the EXPECTED arrays. Previously i only used these ones, not
+    % the measured ones. Why? Cause I'm an idiot, that's why. Sorry guys.
+    V1_expected = fixed_voltages(:);
+    V2_expected = sweep_voltages(:);
+
+else
+    rawI1 = query(smu, ':FETC:ARR:CURR? (@2)');
+    rawI2 = query(smu, ':FETC:ARR:CURR? (@1)');
+    rawV1 = query(smu, ':FETC:ARR:VOLT? (@2)');
+    rawV2 = query(smu, ':FETC:ARR:VOLT? (@1)');
+
+    I1 = str2num(rawI1);
+    I2 = str2num(rawI2);
+    V1 = str2num(rawV1);  % actual measured Vds
+    V2 = str2num(rawV2);  % actual measured Vgs
+    % these are the EXPECTED arrays. Previously i only used these ones, not
+    % the measured ones. Why? Cause I'm an idiot, that's why. Sorry guys.
+    V1_expected = fixed_voltages(:);
+    V2_expected = sweep_voltages(:);
+end
+
 
     t2 = toc(t1);
     t = linspace(0, t2, numel(V2))';
@@ -89,4 +118,5 @@ catch ME
     disp(getReport(ME, 'extended'));
     rethrow(ME);
 end
+toc
 end
