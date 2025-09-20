@@ -1,8 +1,12 @@
 function [I1,V1,V1_expected,I2,V2,V2_expected,t,x_data,y_data,x_label,y_label] = smu_internal_sweep3_chunk(smu, Vgs_list, vDS, DS_comp, GS_comp, ...
     axes, curve_id, curve_color,x_var, y_var,fixed_channel,NPLC,flag)
 
+
 visaTimeout = numel(Vgs_list);
+
 smu.Timeout = visaTimeout;
+
+
 t1 = tic;
 
 sweep_voltages = Vgs_list;
@@ -25,9 +29,10 @@ try
     sendCommandWithCheck(smu, ':SENS1:FUNC "CURR"');
     sendCommandWithCheck(smu, [':SENS1:CURR:NPLC ', num2str(NPLC)]);
     sendCommandWithCheck(smu, [':SENS1:CURR:PROT ', num2str(DS_comp)]);
+
     sendCommandWithCheck(smu, ':TRIG1:SOUR AINT');
     sendCommandWithCheck(smu, [':TRIG1:COUN ', num2str(numel(fixed_voltages))]);
-%     sendCommandWithCheck(smu, ':SENS1:CURR:RANG 1e-4');  % adjust as needed
+
 
 
 
@@ -38,9 +43,10 @@ try
     sendCommandWithCheck(smu, ':SENS2:FUNC "CURR"');
     sendCommandWithCheck(smu, [':SENS2:CURR:NPLC ', num2str(NPLC)]);
     sendCommandWithCheck(smu, [':SENS2:CURR:PROT ', num2str(GS_comp)]);
+
     sendCommandWithCheck(smu, ':TRIG2:SOUR AINT');
     sendCommandWithCheck(smu, [':TRIG2:COUN ', num2str(numel(sweep_voltages))]);
-%     sendCommandWithCheck(smu, ':SENS2:CURR:RANG 1e-4');
+
 
 
 
@@ -64,11 +70,26 @@ if fixed_channel == 1
     rawI2 = query(smu, ':FETC:ARR:CURR? (@2)');
     rawV1 = query(smu, ':FETC:ARR:VOLT? (@1)');
     rawV2 = query(smu, ':FETC:ARR:VOLT? (@2)');
+    raw_stat = query(smu, ':FETC:ARR:VOLT? (@2)');
+
+
+    
 
     I1 = str2num(rawI1);
     I2 = str2num(rawI2);
     V1 = str2num(rawV1);  % actual measured Vds
     V2 = str2num(rawV2);  % actual measured Vgs
+    stat = str2num(raw_stat);
+
+    if any(I1 >0.9*  DS_comp)
+        disp('Compliance at channel 1 was hit!');
+    end
+    if any(I2 > 0.9* GS_comp)
+        disp('Compliance at channel 2 was hit!');
+    end
+
+
+    
     % these are the EXPECTED arrays. Previously i only used these ones, not
     % the measured ones. Why? Cause I'm an idiot, that's why. Sorry guys.
     V1_expected = fixed_voltages(:);
